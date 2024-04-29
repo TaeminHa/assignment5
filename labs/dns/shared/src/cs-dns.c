@@ -11,7 +11,6 @@
 #define BUFFER_SIZE 2048 
 
 
-
 int main() {
     /* A few variable declarations that might be useful */
     /* You can add anything you want */
@@ -51,7 +50,7 @@ int main() {
     /* Add an IP address for cs.utexas.edu domain using TDNSAddRecord() */
     /* Add an IP address for aquila.cs.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "cs.utexas.edu");
-    TDNSAddRecord(context, "cs.utexas.edu", NULL, "50.0.0.10", NULL);  // Example IP for cs.utexas.edu
+    TDNSAddRecord(context, "cs.utexas.edu", "", "50.0.0.10", NULL);  // Example IP for cs.utexas.edu
     TDNSAddRecord(context, "cs.utexas.edu", "aquila", "50.0.0.20", NULL);  // Example IP for aquila.cs.utexas.edu
 
 
