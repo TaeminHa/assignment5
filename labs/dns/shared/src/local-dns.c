@@ -176,6 +176,27 @@ int main() {
                 /* You can extract the query from the response using TDNSGetIterQuery() */
                 /* You should update a per-query context using putNSQID() */
                 else {
+                    char* query;
+                    TDNSGetIterQuery(parsed, query);
+                                            // IP address of the nameserver and domain(?) of the nameserver
+                    const char* nameserverIP = parsed.nsIP;
+                    const char* nameserverDomain = parsed.nsDomain;
+
+                    // Basically, the idea here is to just get the address to relay our received message to
+                    struct sockaddr_in new_addr;
+                    memset(&new_addr, 0, sizeof(new_addr));
+                    new_addr.sin_family = AF_INET;
+                    inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr)
+                    new_addr.sin_port = htons(DNS_PORT);
+
+                    socklen_t new_addr_len = sizeof(new_addr);
+
+                    ssize_t send_len = sendto(sockfd, query, recv_len, 0,
+                                                (struct sockaddr *)&new_addr, new_addr_len);
+                    if (send_len < 0) {
+                        perror("Sendto failed");
+                    }
+                    putNSQID(context, parsed.dh->id, nameserverIP, nameserverDomain);
 
                 }
             }
