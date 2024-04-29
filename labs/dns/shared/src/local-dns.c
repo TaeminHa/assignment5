@@ -157,7 +157,17 @@ int main() {
                     uint16_t qid = parsed.dh->id;
 
                     getNSbyQID(context, qid, nsIP, nsDomain);
-                    getAddrbyQID(context, qid, )
+                    getAddrbyQID(context, qid, (struct sockaddr* )&client_addr);
+
+                    uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, parsed, *nsIP, *nsDomain);
+                    // TODO: do we send BUFFER_SIZE? or just recv_len because didn't we just append to buffer
+                    ssize_t send_len = sendto(sockfd, buffer, new_len, 0,
+                                                  (struct sockaddr *)&client_addr, client_len);
+                    if (send_len < 0) {
+                        perror("Sendto failed");
+                    }
+                    delAddrQID(context, qid);
+                    delNSQID(context, qid);
                 }
 
                 /* 7-1. If the message is a non-authoritative response */
