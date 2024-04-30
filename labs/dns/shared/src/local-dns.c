@@ -86,7 +86,7 @@ int main() {
     /* Add the UT nameserver ns.utexas.edu using using TDNSAddRecord() */
     /* Add an IP address for ns.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "edu");
-    TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.cs.utexas.edu
+    TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.utexas.edu
     TDNSAddRecord(context, "edu", "ns.utexas", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
@@ -116,11 +116,11 @@ int main() {
                     /* You should store a per-query context using putAddrQID() and putNSQID() */
                     /* for future response handling */
                     if (found_record && do_delegation) {
-                        // printf("Found record\n");
+                        printf("Found record\n");
                         // IP address of the nameserver and domain(?) of the nameserver
                         const char* nameserverIP = parsed.nsIP;
                         const char* nameserverDomain = parsed.nsDomain;
-                        // printf("NSIP: %s NSDomain: %s\n", nameserverIP, nameserverDomain);
+                        printf("NSIP: %s NSDomain: %s\n", nameserverIP, nameserverDomain);
 
                         // Basically, the idea here is to just get the address to relay our received message to
                         struct sockaddr_in new_addr;
@@ -156,7 +156,7 @@ int main() {
                     /* c. If the record is not found, send a response back */
                     // 0 || (1 && 1) => 1
                     else if (!found_record || (found_record && !do_delegation)) {
-                        printf("trying to send response back");
+                        printf("ELIF FR: %d DD: %d\n", found_record, do_delegation);
                         // Send the response
                         // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                         ssize_t send_len = sendto(sockfd, result.serialized, result.len, 0,
@@ -180,7 +180,7 @@ int main() {
                 /* You can add the NS information to the response using TDNSPutNStoMessage() */
                 /* Delete a per-query context using delAddrQID() and putNSQID() */
                 if (parsed.dh->aa) {
-                    printf("authoritative response");
+                    printf("Authoritative response\n");
                     char** nsIP; char** nsDomain;
                     uint16_t qid = parsed.dh->id;
                     getNSbyQID(context, qid, nsIP, nsDomain);
@@ -189,6 +189,7 @@ int main() {
                     uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, *nsIP, *nsDomain);
                     // TODO: do we send BUFFER_SIZE? or just recv_len because didn't we just append to buffer
                     // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+                    printf("Sending %s\n", buffer);
                     ssize_t send_len = sendto(sockfd, buffer, new_len, 0,
                                                   (struct sockaddr*) &client_addr, client_len);
                     if (send_len < 0) {
