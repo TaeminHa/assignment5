@@ -87,7 +87,7 @@ int main() {
     /* Add an IP address for ns.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "edu");
     TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.cs.utexas.edu
-    TDNSAddRecord(context, "edu", "ns", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
+    TDNSAddRecord(context, "edu", "ns.utexas", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
     while (1) {
@@ -110,9 +110,6 @@ int main() {
                     if (parsed.nsIP!= NULL && parsed.nsDomain != NULL) {
                         do_delegation = true;
                     }
-                    // printf("Do delegation: %d found: %d\n", do_delegation, found_record);
-
-                    // printf("after do delegation\n");
 
                     /* a. If the record is found and the record indicates delegation, */
                     /* send an iterative query to the corresponding nameserver */
@@ -142,6 +139,7 @@ int main() {
                         socklen_t new_addr_len = sizeof(new_addr);
 
                         // if we bind, this is where we bind but we don't even get here
+                        // we prob should bind cuz that makes no sense
                         // bind(sockfd, (struct sockaddr *)&new_addr, sizeof(new_addr));
 
                         // relay the same message, but to a different ip address since we're delegating
@@ -169,7 +167,6 @@ int main() {
                     }
                     else {
                         // ERROR: SHOULD NEVER REACH THIS
-                        // printf("dude wtf are we doing here");
                     }
                     // printf("HERERERERE\n");
                 }
@@ -186,7 +183,7 @@ int main() {
                     printf("authoritative response");
                     char** nsIP; char** nsDomain;
                     uint16_t qid = parsed.dh->id;
-                                        getNSbyQID(context, qid, nsIP, nsDomain);
+                    getNSbyQID(context, qid, nsIP, nsDomain);
                     getAddrbyQID(context, qid, (struct sockaddr_in*) &client_addr);
 
                     uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, *nsIP, *nsDomain);
