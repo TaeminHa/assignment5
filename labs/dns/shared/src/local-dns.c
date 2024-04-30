@@ -87,7 +87,7 @@ int main() {
     /* Add an IP address for ns.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "edu");
     TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.utexas.edu
-    TDNSAddRecord(context, "edu", "ns.utexas", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
+    TDNSAddRecord(context, "edu", "ns", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
     while (1) {
@@ -145,6 +145,7 @@ int main() {
                         // relay the same message, but to a different ip address since we're delegating
                         ssize_t send_len = sendto(sockfd, buffer, recv_len, 0,
                                                   (struct sockaddr *)&new_addr, new_addr_len);
+                        
                         if (send_len < 0) {
                             perror("Sendto failed");
                         }
