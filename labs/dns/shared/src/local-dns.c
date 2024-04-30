@@ -107,7 +107,7 @@ int main() {
                     uint8_t found_record = TDNSFind(context, &parsed, &result);
                     // determine whether we do delegation
                     bool do_delegation = false;
-                    if (parsed.nsIP!= NULL && parsed.nsDomain != NULL) {
+                    if (parsed.nsIP!= NULL) {
                         do_delegation = true;
                     }
 
