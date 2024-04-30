@@ -86,8 +86,8 @@ int main() {
     /* Add the UT nameserver ns.utexas.edu using using TDNSAddRecord() */
     /* Add an IP address for ns.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "edu");
-    TDNSAddRecord(context, "edu", NULL, NULL, "ns.utexas.edu");  // Delegate to ns.cs.utexas.edu
-    TDNSAddRecord(context, "edu", "ns.utexas", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
+    TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.cs.utexas.edu
+    TDNSAddRecord(context, "edu", "ns", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
     while (1) {
@@ -95,34 +95,56 @@ int main() {
                                     (struct sockaddr *)&client_addr, &client_len);
         if (recv_len > 0) {
             struct TDNSParseResult parsed;
+            // TDNS parse message returns 1 or 0 based on whether it's a query or a response
             uint8_t query_or_response = TDNSParseMsg(buffer, recv_len, &parsed);
             if (query_or_response == TDNS_QUERY) {
 
                 /* 6. If it is a query for A, AAAA, NS DNS record, find the queried record using TDNSFind() */
                 /* You can ignore the other types of queries */
                 if (parsed.qtype == A || parsed.qtype == AAAA || parsed.qtype == NS) {
+                    // printf("query of type A AAAA NS");
                     struct TDNSFindResult result;
                     uint8_t found_record = TDNSFind(context, &parsed, &result);
-                    bool do_delegation = (parsed.nsDomain != NULL) ? true : false;
+                    // determine whether we do delegation
+                    bool do_delegation = false;
+                    if (parsed.nsIP!= NULL && parsed.nsDomain != NULL) {
+                        do_delegation = true;
+                    }
+                    // printf("Do delegation: %d found: %d\n", do_delegation, found_record);
+
+                    // printf("after do delegation\n");
 
                     /* a. If the record is found and the record indicates delegation, */
                     /* send an iterative query to the corresponding nameserver */
                     /* You should store a per-query context using putAddrQID() and putNSQID() */
                     /* for future response handling */
                     if (found_record && do_delegation) {
+                        // printf("Found record\n");
                         // IP address of the nameserver and domain(?) of the nameserver
                         const char* nameserverIP = parsed.nsIP;
                         const char* nameserverDomain = parsed.nsDomain;
+                        // printf("NSIP: %s NSDomain: %s\n", nameserverIP, nameserverDomain);
 
                         // Basically, the idea here is to just get the address to relay our received message to
                         struct sockaddr_in new_addr;
                         memset(&new_addr, 0, sizeof(new_addr));
+                        // printf("After memset\n");
                         new_addr.sin_family = AF_INET;
-                        inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr);
+                        
+                        // inet_pton(AF_INET, nameserverIP, &(new_addr.sin_addr));
+                        if (nameserverIP != NULL)
+                            inet_pton(AF_INET, nameserverIP, &new_addr.sin_addr.s_addr);
+                        else
+                            new_addr.sin_addr.s_addr = INADDR_ANY;
                         new_addr.sin_port = htons(DNS_PORT);
+                        // printf("Here after inet_pton\n");
 
                         socklen_t new_addr_len = sizeof(new_addr);
 
+                        // if we bind, this is where we bind but we don't even get here
+                        // bind(sockfd, (struct sockaddr *)&new_addr, sizeof(new_addr));
+
+                        // relay the same message, but to a different ip address since we're delegating
                         ssize_t send_len = sendto(sockfd, buffer, recv_len, 0,
                                                   (struct sockaddr *)&new_addr, new_addr_len);
                         if (send_len < 0) {
@@ -130,11 +152,15 @@ int main() {
                         }
                         putAddrQID(context, parsed.dh->id, &client_addr);
                         putNSQID(context, parsed.dh->id, nameserverIP, nameserverDomain);
+                        // printf("finished put qid shit");
                     }
                     /* b. If the record is found and the record doesn't indicate delegation, send a response back*/
                     /* c. If the record is not found, send a response back */
+                    // 0 || (1 && 1) => 1
                     else if (!found_record || (found_record && !do_delegation)) {
+                        printf("trying to send response back");
                         // Send the response
+                        // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                         ssize_t send_len = sendto(sockfd, result.serialized, result.len, 0,
                                                   (struct sockaddr *)&client_addr, client_len);
                         if (send_len < 0) {
@@ -143,10 +169,13 @@ int main() {
                     }
                     else {
                         // ERROR: SHOULD NEVER REACH THIS
+                        // printf("dude wtf are we doing here");
                     }
+                    // printf("HERERERERE\n");
                 }
             }
             else if (query_or_response == TDNS_RESPONSE) {
+                printf("received a response");
                 /* 7. If the message is an authoritative response (i.e., it contains an answer), */
                 /* add the NS information to the response and send it to the original client */
                 /* You can retrieve the NS and client address information for the response using */
@@ -154,16 +183,17 @@ int main() {
                 /* You can add the NS information to the response using TDNSPutNStoMessage() */
                 /* Delete a per-query context using delAddrQID() and putNSQID() */
                 if (parsed.dh->aa) {
+                    printf("authoritative response");
                     char** nsIP; char** nsDomain;
                     uint16_t qid = parsed.dh->id;
-
-                    getNSbyQID(context, qid, nsIP, nsDomain);
-                    getAddrbyQID(context, qid, (struct sockaddr* )&client_addr);
+                                        getNSbyQID(context, qid, nsIP, nsDomain);
+                    getAddrbyQID(context, qid, (struct sockaddr_in*) &client_addr);
 
                     uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, *nsIP, *nsDomain);
                     // TODO: do we send BUFFER_SIZE? or just recv_len because didn't we just append to buffer
+                    // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                     ssize_t send_len = sendto(sockfd, buffer, new_len, 0,
-                                                  (struct sockaddr *)&client_addr, client_len);
+                                                  (struct sockaddr*) &client_addr, client_len);
                     if (send_len < 0) {
                         perror("Sendto failed");
                     }
@@ -177,9 +207,10 @@ int main() {
                 /* You can extract the query from the response using TDNSGetIterQuery() */
                 /* You should update a per-query context using putNSQID() */
                 else {
+                    printf("received non authoritative resopnse");
                     char* query;
                     TDNSGetIterQuery(&parsed, query);
-                                            // IP address of the nameserver and domain(?) of the nameserver
+                    // IP address of the nameserver and domain(?) of the nameserver
                     const char* nameserverIP = parsed.nsIP;
                     const char* nameserverDomain = parsed.nsDomain;
 
@@ -187,26 +218,32 @@ int main() {
                     struct sockaddr_in new_addr;
                     memset(&new_addr, 0, sizeof(new_addr));
                     new_addr.sin_family = AF_INET;
-                    inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr);
+                    // inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr);
+                    // inet_pton(AF_INET, nameserverIP, &new_addr.sin_addr);
+                    if (nameserverIP != NULL)
+                        inet_pton(AF_INET, nameserverIP, &new_addr.sin_addr.s_addr);
+                    else
+                        new_addr.sin_addr.s_addr = INADDR_ANY;
                     new_addr.sin_port = htons(DNS_PORT);
 
                     socklen_t new_addr_len = sizeof(new_addr);
-
+                    // bind(sockfd, (struct sockaddr *)&new_addr, sizeof(new_addr));
                     ssize_t send_len = sendto(sockfd, query, recv_len, 0,
                                                 (struct sockaddr *)&new_addr, new_addr_len);
                     if (send_len < 0) {
                         perror("Sendto failed");
                     }
                     putNSQID(context, parsed.dh->id, nameserverIP, nameserverDomain);
-
                 }
             }
 
             else {
                 // ERROR: SHOULD NEVER REACH THIS PART
+                printf("wtf are wwe doing here pt2");
             }
         }
     }
+    // printf("closing connection???\n");
     close(sockfd);
     return 0;
 }
