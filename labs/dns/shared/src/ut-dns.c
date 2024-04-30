@@ -68,14 +68,16 @@ int main() {
                 // Check if the query is for A, AAAA, or NS records
                 if (parsed.qtype == A || parsed.qtype == AAAA || parsed.qtype == NS) {
                     struct TDNSFindResult result;
-                    if (TDNSFind(context, &parsed, &result)) {
+                    TDNSFind(context, &parsed, &result);
+                    // if (TDNSFind(context, &parsed, &result)) {
                         // Send the response
                         ssize_t send_len = sendto(sockfd, result.serialized, result.len, 0,
                                                   (struct sockaddr *)&client_addr, client_len);
                         if (send_len < 0) {
                             perror("Sendto failed");
                         }
-                    }
+                    // }
+
                 }
             }
         }

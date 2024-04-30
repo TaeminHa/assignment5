@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include "lib/tdns/tdns-c.h"
+#include <stdbool.h>
 
 /* DNS header structure */
 struct dnsheader {
@@ -117,7 +118,7 @@ int main() {
                         struct sockaddr_in new_addr;
                         memset(&new_addr, 0, sizeof(new_addr));
                         new_addr.sin_family = AF_INET;
-                        inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr)
+                        inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr);
                         new_addr.sin_port = htons(DNS_PORT);
 
                         socklen_t new_addr_len = sizeof(new_addr);
@@ -159,7 +160,7 @@ int main() {
                     getNSbyQID(context, qid, nsIP, nsDomain);
                     getAddrbyQID(context, qid, (struct sockaddr* )&client_addr);
 
-                    uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, parsed, *nsIP, *nsDomain);
+                    uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, *nsIP, *nsDomain);
                     // TODO: do we send BUFFER_SIZE? or just recv_len because didn't we just append to buffer
                     ssize_t send_len = sendto(sockfd, buffer, new_len, 0,
                                                   (struct sockaddr *)&client_addr, client_len);
@@ -177,7 +178,7 @@ int main() {
                 /* You should update a per-query context using putNSQID() */
                 else {
                     char* query;
-                    TDNSGetIterQuery(parsed, query);
+                    TDNSGetIterQuery(&parsed, query);
                                             // IP address of the nameserver and domain(?) of the nameserver
                     const char* nameserverIP = parsed.nsIP;
                     const char* nameserverDomain = parsed.nsDomain;
@@ -186,7 +187,7 @@ int main() {
                     struct sockaddr_in new_addr;
                     memset(&new_addr, 0, sizeof(new_addr));
                     new_addr.sin_family = AF_INET;
-                    inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr)
+                    inet_pton(AF_INET, nameserverIP, new_addr.sin_addr.s_addr);
                     new_addr.sin_port = htons(DNS_PORT);
 
                     socklen_t new_addr_len = sizeof(new_addr);
