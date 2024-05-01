@@ -230,15 +230,12 @@ uint8_t TDNSParseMsg (const char *message, uint64_t size, struct TDNSParseResult
       std::unique_ptr<RRGen> rr;
       
       while(dmr.getRR(rrsection, dn, dt, rrttl, rr)) {
-        cout << "in get RR " << endl;
         if(rrsection == DNSSection::Additional && dt == DNSType::A){
-          cout << "in RR and we are addition + type A" << endl;
           auto agen =dynamic_cast<AGen*>(rr.get());
           cout << "Got nsIP: " << agen->toString() << endl;
           response->nsIP = strdup(agen->toString().c_str());
         }
         if (rrsection == DNSSection::Authority && dt == DNSType::NS){
-          cout << "in RR and we are authority + type NS" << endl;
           auto nsgen = dynamic_cast<NSGen*>(rr.get());
           cout << "Got NS: " << nsgen->toString() << endl;
           response->nsDomain = strdup(nsgen->toString().c_str());
@@ -312,7 +309,6 @@ uint8_t TDNSFind (struct TDNSServerContext* context, struct TDNSParseResult *res
     
     if (node->zone && (empty.compare(dn.toString())!=0)) {
       /* check if the IP is available locally */
-      cout << "in the first if (checking if local)" << endl;
       auto cache_node = node->zone->find(dn, last, false);
       cout << "Not matched: " << dn.toString() <<  endl;
       cout << "Matched: " << last <<  endl;
@@ -374,7 +370,6 @@ uint8_t TDNSFind (struct TDNSServerContext* context, struct TDNSParseResult *res
           ++range.second;
           
           for(auto i2 = range.first; i2 != range.second; ++i2) {
-            cout << "looping for a request record (nsip)" << endl;
             const auto& rrset = i2->second;
             for(const auto& rr : rrset.contents) {
               cout<<"Found Request Record Type: " << i2->first << endl;
@@ -398,7 +393,6 @@ uint8_t TDNSFind (struct TDNSServerContext* context, struct TDNSParseResult *res
     }
 
     if (empty.compare(dn.toString())==0) {
-      cout << "in the second if (idk what this is)" << endl;
       auto iter = node->rrsets.find(r_qtype);
       if (iter == node->rrsets.end()) {
         if (node->zone) {

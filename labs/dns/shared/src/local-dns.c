@@ -94,11 +94,14 @@ int main() {
         ssize_t recv_len = recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
                                     (struct sockaddr *)&client_addr, &client_len);
         if (recv_len > 0) {
-            printf("(LOCAL_DNS) RECEIVED: %s\n", buffer);
+            // printf("(LOCAL_DNS) RECEIVED: %s\n", buffer);
             struct TDNSParseResult parsed;
             // TDNS parse message returns 1 or 0 based on whether it's a query or a response
             uint8_t query_or_response = TDNSParseMsg(buffer, recv_len, &parsed);
+            // printf("finished parse message with response: %d", query_or_response);
+            
             if (query_or_response == TDNS_QUERY) {
+                printf("received a query\n");
                 if (parsed.nsIP!= NULL) {
                     printf("outside NSIP: %s\n", parsed.nsIP);
                 }
@@ -187,21 +190,31 @@ int main() {
                 }
             }
             else if (query_or_response == TDNS_RESPONSE) {
-                printf("received a response");
+                // printf("received a response\n");
                 /* 7. If the message is an authoritative response (i.e., it contains an answer), */
                 /* add the NS information to the response and send it to the original client */
                 /* You can retrieve the NS and client address information for the response using */
                 /* getNSbyQID() and getAddrbyQID() */
                 /* You can add the NS information to the response using TDNSPutNStoMessage() */
                 /* Delete a per-query context using delAddrQID() and putNSQID() */
-                if (parsed.dh->aa) {
+                // printf("after received a response\n");
+                // printf("received response with parsed %u\n", parsed.qtype);
+                // printf("received response with aa %p", parsed.dh);
+                // printf("here mf");
+                if (parsed.dh != NULL && parsed.dh->aa) {
+                // if (false) {
                     printf("Authoritative response\n");
-                    const char** nsIP; const char** nsDomain;
+                    char* nsIP; char* nsDomain;
+                    // const char** nsIP; const char** nsDomain;
                     uint16_t qid = parsed.dh->id;
-                    getNSbyQID(context, qid, nsIP, nsDomain);
+                    printf("before get ns by qid %d", qid);
+                    getNSbyQID(context, qid, &nsIP, &nsDomain);
+                    printf("before get addr by qid"); 
                     getAddrbyQID(context, qid, (struct sockaddr_in*) &client_addr);
 
-                    uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, *nsIP, *nsDomain);
+                    printf("before get TDNSPutNStoMessage");
+                    uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, nsIP, nsDomain);
+                    printf("got new len of %d", new_len);
                     // TODO: do we send BUFFER_SIZE? or just recv_len because didn't we just append to buffer
                     // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                     printf("Sending %s\n", buffer);
@@ -213,7 +226,7 @@ int main() {
                     delAddrQID(context, qid);
                     delNSQID(context, qid);
                 }
-
+                
                 /* 7-1. If the message is a non-authoritative response */
                 /* (i.e., it contains referral to another nameserver) */
                 /* send an iterative query to the corresponding nameserver */
@@ -221,8 +234,10 @@ int main() {
                 /* You should update a per-query context using putNSQID() */
                 else {
                     printf("received non authoritative resopnse");
-                    char* query;
+                    // char* query;
+                    char query[BUFFER_SIZE];
                     TDNSGetIterQuery(&parsed, query);
+                    printf("finished get iterquery");
                     // IP address of the nameserver and domain(?) of the nameserver
                     const char* nameserverIP = parsed.nsIP;
                     const char* nameserverDomain = parsed.nsDomain;

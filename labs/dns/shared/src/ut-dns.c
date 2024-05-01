@@ -52,7 +52,7 @@ int main() {
     TDNSCreateZone(context, "utexas.edu");
     TDNSAddRecord(context, "utexas.edu", "www", "40.0.0.10", NULL);  // Example IP
     TDNSAddRecord(context, "utexas.edu", "cs", NULL, "ns.cs.utexas.edu");  // Delegate to ns.cs.utexas.edu
-    TDNSAddRecord(context, "utexas.edu", "ns.cs", "50.0.0.30", NULL);  // Example IP for NS
+    TDNSAddRecord(context, "cs.utexas.edu", "ns", "50.0.0.30", NULL);  // Example IP for NS
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
 
