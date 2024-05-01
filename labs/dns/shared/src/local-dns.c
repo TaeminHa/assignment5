@@ -87,7 +87,7 @@ int main() {
     /* Add an IP address for ns.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "edu");
     TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.utexas.edu
-    TDNSAddRecord(context, "edu", "ns.utexas", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
+    TDNSAddRecord(context, "utexas.edu", "ns", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
     while (1) {
@@ -100,10 +100,10 @@ int main() {
             uint8_t query_or_response = TDNSParseMsg(buffer, recv_len, &parsed);
             if (query_or_response == TDNS_QUERY) {
                 if (parsed.nsIP!= NULL) {
-                    printf("NSIP: %s\n", parsed.nsIP);
+                    printf("outside NSIP: %s\n", parsed.nsIP);
                 }
                 if (parsed.nsDomain != NULL) {
-                    printf("NSDomain: %s\n", parsed.nsDomain);                        
+                    printf("outside NSDomain: %s\n", parsed.nsDomain);                        
                 }
 
                 /* 6. If it is a query for A, AAAA, NS DNS record, find the queried record using TDNSFind() */
@@ -113,13 +113,14 @@ int main() {
                     struct TDNSFindResult result;
                     uint8_t found_record = TDNSFind(context, &parsed, &result);
                     // determine whether we do delegation
-                    bool do_delegation = false;
+                    bool do_delegation = parsed.nsIP != NULL && parsed.nsDomain != NULL;
+                    // bool do_delegation = false;
                     if (parsed.nsIP!= NULL) {
                         do_delegation = true;
-                        printf("NSIP: %s\n", parsed.nsIP);
+                        printf("inside NSIP: %s\n", parsed.nsIP);
                     }
                     if (parsed.nsDomain != NULL) {
-                        printf("NSDomain: %s\n", parsed.nsDomain);                        
+                        printf("inside NSDomain: %s\n", parsed.nsDomain);                        
                     }
 
                     /* a. If the record is found and the record indicates delegation, */
@@ -173,6 +174,8 @@ int main() {
                         // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                         ssize_t send_len = sendto(sockfd, result.serialized, result.len, 0,
                                                   (struct sockaddr *)&client_addr, client_len);
+
+                        printf("finished sending");
                         if (send_len < 0) {
                             perror("Sendto failed");
                         }
