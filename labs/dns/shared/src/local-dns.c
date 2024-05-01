@@ -110,6 +110,10 @@ int main() {
                     bool do_delegation = false;
                     if (parsed.nsIP!= NULL) {
                         do_delegation = true;
+                        printf("NSIP: %s\n", parsed.nsIP);
+                    }
+                    if (parsed.nsDomain != NULL) {
+                        printf("NSDomain: %s\n", parsed.nsDomain);                        
                     }
 
                     /* a. If the record is found and the record indicates delegation, */
