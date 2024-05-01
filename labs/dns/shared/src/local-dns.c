@@ -99,6 +99,12 @@ int main() {
             // TDNS parse message returns 1 or 0 based on whether it's a query or a response
             uint8_t query_or_response = TDNSParseMsg(buffer, recv_len, &parsed);
             if (query_or_response == TDNS_QUERY) {
+                if (parsed.nsIP!= NULL) {
+                    printf("NSIP: %s\n", parsed.nsIP);
+                }
+                if (parsed.nsDomain != NULL) {
+                    printf("NSDomain: %s\n", parsed.nsDomain);                        
+                }
 
                 /* 6. If it is a query for A, AAAA, NS DNS record, find the queried record using TDNSFind() */
                 /* You can ignore the other types of queries */
