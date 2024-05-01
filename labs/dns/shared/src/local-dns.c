@@ -87,13 +87,14 @@ int main() {
     /* Add an IP address for ns.utexas.edu domain using TDNSAddRecord() */
     TDNSCreateZone(context, "edu");
     TDNSAddRecord(context, "edu", "utexas", NULL, "ns.utexas.edu");  // Delegate to ns.utexas.edu
-    TDNSAddRecord(context, "edu", "ns", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
+    TDNSAddRecord(context, "edu", "ns.utexas", "40.0.0.20", NULL);  // ns.utexas.edu NS IP address
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
     while (1) {
         ssize_t recv_len = recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
                                     (struct sockaddr *)&client_addr, &client_len);
         if (recv_len > 0) {
+            printf("(LOCAL_DNS) RECEIVED: %s\n", buffer);
             struct TDNSParseResult parsed;
             // TDNS parse message returns 1 or 0 based on whether it's a query or a response
             uint8_t query_or_response = TDNSParseMsg(buffer, recv_len, &parsed);
@@ -182,7 +183,7 @@ int main() {
                 /* Delete a per-query context using delAddrQID() and putNSQID() */
                 if (parsed.dh->aa) {
                     printf("Authoritative response\n");
-                    char** nsIP; char** nsDomain;
+                    const char** nsIP; const char** nsDomain;
                     uint16_t qid = parsed.dh->id;
                     getNSbyQID(context, qid, nsIP, nsDomain);
                     getAddrbyQID(context, qid, (struct sockaddr_in*) &client_addr);

@@ -52,7 +52,7 @@ int main() {
     TDNSCreateZone(context, "utexas.edu");
     TDNSAddRecord(context, "utexas.edu", "www", "40.0.0.10", NULL);  // Example IP
     TDNSAddRecord(context, "utexas.edu", "cs", NULL, "ns.cs.utexas.edu");  // Delegate to ns.cs.utexas.edu
-    TDNSAddRecord(context, "utexas.edu", "ns.cs", "50.0.0.10", NULL);  // Example IP for NS
+    TDNSAddRecord(context, "utexas.edu", "ns.cs", "50.0.0.30", NULL);  // Example IP for NS
 
     /* 5. Receive a message continuously and parse it using TDNSParseMsg() */
 
@@ -62,7 +62,9 @@ int main() {
     while (1) {
         ssize_t recv_len = recvfrom(sockfd, buffer, BUFFER_SIZE, 0,
                                     (struct sockaddr *)&client_addr, &client_len);
+
         if (recv_len > 0) {
+            printf("(UT_DNS) RECEIVED: %s\n", buffer);
             struct TDNSParseResult parsed;
             if (TDNSParseMsg(buffer, recv_len, &parsed) == TDNS_QUERY) {
                 // Check if the query is for A, AAAA, or NS records
