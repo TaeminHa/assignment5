@@ -101,13 +101,6 @@ int main() {
             // printf("finished parse message with response: %d", query_or_response);
             
             if (query_or_response == TDNS_QUERY) {
-                printf("received a query\n");
-                if (parsed.nsIP!= NULL) {
-                    printf("outside NSIP: %s\n", parsed.nsIP);
-                }
-                if (parsed.nsDomain != NULL) {
-                    printf("outside NSDomain: %s\n", parsed.nsDomain);                        
-                }
 
                 /* 6. If it is a query for A, AAAA, NS DNS record, find the queried record using TDNSFind() */
                 /* You can ignore the other types of queries */
@@ -120,27 +113,20 @@ int main() {
                     // bool do_delegation = false;
                     if (parsed.nsIP!= NULL) {
                         do_delegation = true;
-                        printf("inside NSIP: %s\n", parsed.nsIP);
+                        // printf("inside NSIP: %s\n", parsed.nsIP);
                     }
-                    if (parsed.nsDomain != NULL) {
-                        printf("inside NSDomain: %s\n", parsed.nsDomain);                        
-                    }
-
                     /* a. If the record is found and the record indicates delegation, */
                     /* send an iterative query to the corresponding nameserver */
                     /* You should store a per-query context using putAddrQID() and putNSQID() */
                     /* for future response handling */
                     if (found_record && do_delegation) {
-                        printf("Found record\n");
                         // IP address of the nameserver and domain(?) of the nameserver
                         const char* nameserverIP = parsed.nsIP;
                         const char* nameserverDomain = parsed.nsDomain;
-                        printf("NSIP: %s NSDomain: %s\n", nameserverIP, nameserverDomain);
 
                         // Basically, the idea here is to just get the address to relay our received message to
                         struct sockaddr_in new_addr;
                         memset(&new_addr, 0, sizeof(new_addr));
-                        // printf("After memset\n");
                         new_addr.sin_family = AF_INET;
                         
                         // inet_pton(AF_INET, nameserverIP, &(new_addr.sin_addr));
@@ -149,7 +135,6 @@ int main() {
                         else
                             new_addr.sin_addr.s_addr = INADDR_ANY;
                         new_addr.sin_port = htons(DNS_PORT);
-                        // printf("Here after inet_pton\n");
 
                         socklen_t new_addr_len = sizeof(new_addr);
 
@@ -172,13 +157,11 @@ int main() {
                     /* c. If the record is not found, send a response back */
                     // 0 || (1 && 1) => 1
                     else if (!found_record || (found_record && !do_delegation)) {
-                        printf("ELIF FR: %d DD: %d\n", found_record, do_delegation);
                         // Send the response
                         // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
                         ssize_t send_len = sendto(sockfd, result.serialized, result.len, 0,
                                                   (struct sockaddr *)&client_addr, client_len);
 
-                        printf("finished sending");
                         if (send_len < 0) {
                             perror("Sendto failed");
                         }
@@ -186,7 +169,6 @@ int main() {
                     else {
                         // ERROR: SHOULD NEVER REACH THIS
                     }
-                    // printf("HERERERERE\n");
                 }
             }
             else if (query_or_response == TDNS_RESPONSE) {
@@ -203,21 +185,15 @@ int main() {
                 // printf("here mf");
                 if (parsed.dh != NULL && parsed.dh->aa) {
                 // if (false) {
-                    printf("Authoritative response\n");
                     char* nsIP; char* nsDomain;
                     // const char** nsIP; const char** nsDomain;
                     uint16_t qid = parsed.dh->id;
-                    printf("before get ns by qid %d", qid);
                     getNSbyQID(context, qid, &nsIP, &nsDomain);
-                    printf("before get addr by qid"); 
                     getAddrbyQID(context, qid, (struct sockaddr_in*) &client_addr);
 
-                    printf("before get TDNSPutNStoMessage");
                     uint64_t new_len = TDNSPutNStoMessage(buffer, recv_len, &parsed, nsIP, nsDomain);
-                    printf("got new len of %d", new_len);
                     // TODO: do we send BUFFER_SIZE? or just recv_len because didn't we just append to buffer
                     // bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
-                    printf("Sending %s\n", buffer);
                     ssize_t send_len = sendto(sockfd, buffer, new_len, 0,
                                                   (struct sockaddr*) &client_addr, client_len);
                     if (send_len < 0) {
@@ -233,11 +209,9 @@ int main() {
                 /* You can extract the query from the response using TDNSGetIterQuery() */
                 /* You should update a per-query context using putNSQID() */
                 else {
-                    printf("received non authoritative resopnse");
                     // char* query;
                     char query[BUFFER_SIZE];
                     TDNSGetIterQuery(&parsed, query);
-                    printf("finished get iterquery");
                     // IP address of the nameserver and domain(?) of the nameserver
                     const char* nameserverIP = parsed.nsIP;
                     const char* nameserverDomain = parsed.nsDomain;
@@ -267,11 +241,9 @@ int main() {
 
             else {
                 // ERROR: SHOULD NEVER REACH THIS PART
-                printf("wtf are wwe doing here pt2");
             }
         }
     }
-    // printf("closing connection???\n");
     close(sockfd);
     return 0;
 }

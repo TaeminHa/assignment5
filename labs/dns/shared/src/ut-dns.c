@@ -64,7 +64,6 @@ int main() {
                                     (struct sockaddr *)&client_addr, &client_len);
 
         if (recv_len > 0) {
-            printf("(UT_DNS) RECEIVED: %s\n", buffer);
             struct TDNSParseResult parsed;
             if (TDNSParseMsg(buffer, recv_len, &parsed) == TDNS_QUERY) {
                 // Check if the query is for A, AAAA, or NS records
